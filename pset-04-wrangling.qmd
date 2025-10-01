@@ -17,6 +17,9 @@ Write a first line of code for your problem set that defines `census_key` by run
 
 ```{r}
 ## Your code here
+
+source("census-key.R")
+
 ```
 
 2. The [US Census API User Guide](https://www.census.gov/content/dam/Census/data/developers/api-user-guide/api-user-guide.pdf)
@@ -25,12 +28,14 @@ provides details on how to leverage this valuable resource. We are interested in
 
 ```{r}
 url <- "https://api.census.gov/data/2021/pep/population"
+
 ```
 
 Use the **httr2** package to construct the following GET request.
 
 ```
 https://api.census.gov/data/2021/pep/population?get=POP_2020,POP_2021,NAME&for=state:*&key=YOURKEYHERE
+
 ```
 
 Create an object called `request` of class `httr2_request` with this URL as an endpoint.
@@ -40,27 +45,40 @@ Hint: Print out `request` to check that the URL matches what we want.
 #| message: false
 #| warning: false
 library(httr2)
-#request <- 
+
+request <- request(
+  paste0(
+    "https://api.census.gov/data/2021/pep/population?",
+    "get=POP_2020,POP_2021,NAME&for=state:*&key=", census_key
+  )
+)
+
 ```
 
 3. Make a request to the US Census API using the `request` object. Save the response to and object named `response`. Check the response status of your request and make sure it was successful. You can learn about _status codes_ [here](https://en.wikipedia.org/wiki/List_of_HTTP_status_codes).
 
 
 ```{r}
-#response <- 
+
+response <- request |> req_perform() 
+  
 ```
 
 4. Use a function from the **httr2** package to determine the content type of your response.
 
 ```{r}
 # Your code here
+
+resp_content_type(response)
+
 ```
 
 5. Use just one line of code and one function to extract the data into a matrix. 
 Hints: 1) Use the `resp_body_json` function. 2) The first row of the matrix will be the variable names and this OK as we will fix in the next exercise.
 
 ```{r}
-#population <- 
+population <- resp_body_json(response,simplifyVector = TRUE,simplifyMatrix = TRUE,simplifyDataFrame = TRUE)
+
 ```
 
 6. Examine the `population` matrix you just created. Notice that 1) it is not tidy, 2) the column types are not what we want, and 3) the first row is a header. Convert `population` to a tidy dataset. Remove the state ID column and change the name of the column with state names to `state_name`. Add a column with state abbreviations called `state`. Make sure you assign the abbreviations for DC and PR correctly. Hint: Use the **janitor** package to make the first row the header. 
@@ -70,8 +88,12 @@ Hints: 1) Use the `resp_body_json` function. 2) The first row of the matrix will
 #| warning: false
 library(tidyverse)
 library(janitor)
-#population <- population |> ## Use janitor row to names function
-  # convert to tibble
+
+population <- population |> 
+  row_to_names(row_number = 1) |>
+  as_tibble() |>
+  select(-state)
+
   # remove stat column
   # rename state column to state_name
   # use pivot_longer to tidy
