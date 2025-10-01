@@ -77,7 +77,7 @@ resp_content_type(response)
 Hints: 1) Use the `resp_body_json` function. 2) The first row of the matrix will be the variable names and this OK as we will fix in the next exercise.
 
 ```{r}
-population <- resp_body_json(response,simplifyVector = TRUE,simplifyMatrix = TRUE,simplifyDataFrame = TRUE)
+population <- resp_body_json(response,simplifyVector = TRUE, simplifyDataFrame = TRUE)
 
 ```
 
@@ -89,25 +89,31 @@ population <- resp_body_json(response,simplifyVector = TRUE,simplifyMatrix = TRU
 library(tidyverse)
 library(janitor)
 
-population <- population |> 
+population <- population |>
   row_to_names(row_number = 1) |>
   as_tibble() |>
-  select(-state)
+  select(-state) |>
+  rename(state_name = NAME) |>
+  mutate(
+      state = case_when(
+      state_name %in% state.name ~ state.abb[match(state_name, state.name)],
+      state_name == "District of Columbia" ~ "DC",
+      state_name == "Puerto Rico" ~ "PR"
+      )
+  )
+  
+  
 
-  # remove stat column
-  # rename state column to state_name
-  # use pivot_longer to tidy
-  # remove POP_ from year
-  # parese all relevant colunns to numeric
-  # add state abbreviations using state.abb variable
-  # use case_when to add abbreviations for DC and PR
+
 ```
 
 7. As a check, make a barplot of states' 2021 and 2022 populations. Show the state names in the y-axis ordered by population size.  Hint: You will need to use `reorder` and use `facet_wrap`.
 
 ```{r}
-# population |> 
+population |> 
+  pivot_longer(!c(state_name,state),names_to = "Year", values_to = "count") |>
   # reorder state
+  mutate(state_name = reorder(state,count))
   # assign aesthetic mapping
   # use geom_col to plot barplot
   # flip coordinates
