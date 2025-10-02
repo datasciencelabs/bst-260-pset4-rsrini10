@@ -92,14 +92,16 @@ library(janitor)
 population <- population |>
   row_to_names(row_number = 1) |>
   as_tibble() |>
-  select(-state) |>
+  select(-state)|>
   rename(state_name = NAME) |>
-  mutate(
-      state = case_when(
-      state_name %in% state.name ~ state.abb[match(state_name, state.name)],
-      state_name == "District of Columbia" ~ "DC",
-      state_name == "Puerto Rico" ~ "PR"
-      )
+  pivot_longer(!state_name,names_to = "Year", values_to = "pop") |>
+  mutate(Year = str_remove(Year, "POP_"),
+         Year = as.numeric(Year),
+        state = case_when(
+        state_name %in% state.name ~ state.abb[match(state_name, state.name)],
+        state_name == "District of Columbia" ~ "DC",
+        state_name == "Puerto Rico" ~ "PR"
+        )
   )
   
   
@@ -111,13 +113,17 @@ population <- population |>
 
 ```{r}
 population |> 
-  pivot_longer(!c(state_name,state),names_to = "Year", values_to = "count") |>
+  group_by(Year) |>
   # reorder state
-  mutate(state_name = reorder(state,count))
+  mutate(state_name = reorder(state_name,pop)) |>
   # assign aesthetic mapping
+  ggplot(aes(x = state_name, y = pop)) +
   # use geom_col to plot barplot
+  geom_col() +
   # flip coordinates
+  coord_flip() +
   # facet by year
+  facet_wrap(~Year, scales = "free_y")
 ```
 
 
