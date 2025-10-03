@@ -131,6 +131,8 @@ population |>
 
 ```{r}
 url <- "https://github.com/datasciencelabs/2025/raw/refs/heads/main/data/regions.json"
+
+
 ```
 
 points to a JSON file that lists the states in the 10 Public Health Service (PHS) defined by CDC. We want to add these regions to the `population` dataset. To facilitate this create a data frame called `regions` that has two columns `state_name`, `region`, `region_name`. One of the regions has a long name. Change it to something shorter.
@@ -141,14 +143,26 @@ points to a JSON file that lists the states in the 10 Public Health Service (PHS
 library(jsonlite)
 library(purrr)
 url <- "https://github.com/datasciencelabs/2025/raw/refs/heads/main/data/regions.json"
+
 # regions <- use jsonlit JSON parser 
-# regions <- convert list to data frame. You can use map_df in purrr package 
+regions <- fromJSON(url)
+
+regions <- regions |>
+  unnest(states) |>
+  rename(state_name = states) |>
+  filter(state_name %in% c(state.name, "District of Columbia", "Puerto Rico")) |>
+  mutate(region_name = case_when(
+    region_name == "New York and New Jersey, Puerto Rico, Virgin Islands" ~ "Coastal Territories",
+    TRUE ~ region_name
+  ))
+
 ```
 
 9. Add a region and region name columns to the `population` data frame.
 
 ```{r}
-# population <- 
+population <- population |>
+  left_join(regions, by = "state_name")
 ```
 
 
@@ -157,7 +171,17 @@ url <- "https://github.com/datasciencelabs/2025/raw/refs/heads/main/data/regions
 
 ```{r}
 api <- "https://data.cdc.gov/resource/pwn4-m3yp.json"
-# cases_raw <- 
+
+request <- request(api)
+
+response <- request |> 
+  req_perform()
+
+cases_raw <- resp_body_json(response, simplifyVector = TRUE, simplifyDataFrame = TRUE)
+
+# All the data is not there because the API only provides us with a subset of the
+# data when we use the default request function. 
+
 ```
 
 We see exactly 1,000 rows. We should be seeing over $52 \times 3$ rows per state.
@@ -165,8 +189,19 @@ We see exactly 1,000 rows. We should be seeing over $52 \times 3$ rows per state
 11. The reason you see exactly 1,000 rows is because CDC has a default limit. You can change this limit by adding `$limit=10000000000` to the request. Rewrite the previous request to ensure that you receive all the data. Then wrangle the resulting data frame to produce a data frame with columns `state`, `date` (should be the end date) and `cases`. Make sure the cases are numeric and the dates are in `Date` ISO-8601 format.
 
 ```{r}
-api <- "https://data.cdc.gov/resource/pwn4-m3yp.json"
-# cases_raw <- 
+api <- "https://data.cdc.gov/resource/pwn4-m3yp.json?$limit=10000000000"
+
+request <- request(api)
+
+response <- request |> 
+  req_perform()
+
+cases_raw <- resp_body_json(response, simplifyVector = TRUE, simplifyDataFrame = TRUE) |>
+  select(state, end_date, tot_cases) |>
+  rename(date = end_date, cases = tot_cases) |>
+  mutate(cases = as.numeric(cases),
+         date = as.Date(date))
+
 ```
 
 
